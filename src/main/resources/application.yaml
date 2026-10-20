@@ -1,0 +1,28 @@
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: api-sentinel
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sentinel
+    username: postgres
+    password: mr.cs193
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+  
+  logging:
+  level:
+    root: INFO
+    com.apisentinel: DEBUG
+  pattern:
+    level: "%5p [monitorId=%X{monitorId:-}]"
+
