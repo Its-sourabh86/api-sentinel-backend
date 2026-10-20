@@ -7,9 +7,9 @@ spring:
     name: api-sentinel
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/sentinel
-    username: postgres
-    password: mr.cs193
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sentinel}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
 
   jpa:
     hibernate:
