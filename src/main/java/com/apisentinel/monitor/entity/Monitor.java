@@ -44,6 +44,9 @@ public class Monitor {
     @Column(name = "response_schema", columnDefinition = "TEXT")
     private String responseSchema;
 
+    @Column(name = "next_run_at", nullable = false)
+    private Instant nextRunAt;
+
     // JPA ko ye no-argument constructor chahiye
     protected Monitor() {
     }
@@ -63,6 +66,9 @@ public class Monitor {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.nextRunAt == null) {
+            this.nextRunAt = now;
+        }
     }
 
     @PreUpdate
@@ -148,5 +154,17 @@ public class Monitor {
         this.enabled = enabled;
     }
 
-    
+    public Instant getNextRunAt() {
+        return nextRunAt;
+    }
+
+    public void setNextRunAt(Instant nextRunAt) {
+        this.nextRunAt = nextRunAt;
+    }
+
+    /** Agla check turant chalne ke liye (create, resume, interval change par). */
+    public void rescheduleNow() {
+        this.nextRunAt = Instant.now();
+    }
+
 }
