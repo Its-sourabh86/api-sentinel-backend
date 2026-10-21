@@ -63,8 +63,10 @@ public class MonitorService {
             monitor.setUrl(request.url());
         if (request.method() != null)
             monitor.setHttpMethod(request.method());
-        if (request.intervalSeconds() != null)
+        if (request.intervalSeconds() != null) {
             monitor.setIntervalSeconds(request.intervalSeconds());
+            monitor.rescheduleNow(); // 1 ghante se 30s kiya toh ghante bhar wait na karna pade
+        }
         if (request.timeoutMs() != null)
             monitor.setTimeoutMs(request.timeoutMs());
         if (request.expectedStatus() != null)
@@ -86,6 +88,7 @@ public class MonitorService {
     public MonitorResponse resume(Long id) {
         Monitor monitor = monitorRepository.getByIdOrThrow(id);
         monitor.setEnabled(true);
+        monitor.rescheduleNow(); // pause ke dauran next_run_at purana ho chuka hai
         Monitor saved = monitorRepository.save(monitor);
         return MonitorResponse.from(saved);
     }
