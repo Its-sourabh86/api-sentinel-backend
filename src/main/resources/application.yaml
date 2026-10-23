@@ -36,3 +36,14 @@ sentinel:
     worker-threads: 10
     queue-capacity: 100
 
+incident:
+    failure-threshold: 3
+    recovery-threshold: 2
+
+notification:
+    enabled: true
+    webhook-url: ${SENTINEL_WEBHOOK_URL:http://localhost:8080/mock/webhook}
+    webhook-secret: ${SENTINEL_WEBHOOK_SECRET:dev-only-secret}
+    timeout-ms: 5000
+    max-attempts: 3
+    retry-backoff-ms: 1000
