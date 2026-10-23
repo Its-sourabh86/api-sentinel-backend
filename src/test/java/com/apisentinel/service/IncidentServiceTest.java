@@ -20,6 +20,7 @@ import com.apisentinel.repository.CheckResultRepository;
 import com.apisentinel.repository.IncidentRepository;
 import com.apisentinel.repository.MonitorRepository;
 import com.apisentinel.utils.ValidationReport;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -41,10 +42,11 @@ class IncidentServiceTest {
     @Mock private MonitorRepository monitorRepository;
     @Mock private IncidentRepository incidentRepository;
     @Mock private CheckResultRepository checkResultRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private IncidentService service() {
         return new IncidentService(monitorRepository, incidentRepository, checkResultRepository,
-                new IncidentProperties(3, 2), Clock.fixed(NOW, ZoneOffset.UTC));
+                new IncidentProperties(3, 2), Clock.fixed(NOW, ZoneOffset.UTC), eventPublisher);
     }
 
     private CheckResult result(CheckStatus status) {

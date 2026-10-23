@@ -1,4 +1,6 @@
 package com.apisentinel.service;
+
+import com.apisentinel.exception.InvalidRequestException;
 import com.apisentinel.exception.ResourceNotFoundException;
 import com.apisentinel.dto.request.CreateMonitorRequest;
 import com.apisentinel.dto.request.UpdateMonitorRequest;
@@ -6,6 +8,8 @@ import com.apisentinel.dto.response.MonitorResponse;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.HttpMethod;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.security.UnsafeUrlException;
+import com.apisentinel.security.UrlSafetyValidator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,171 +28,204 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MonitorServiceTest {
 
-    @Mock
-    private MonitorRepository monitorRepository;
+        @Mock
+        private MonitorRepository monitorRepository;
 
-    @InjectMocks
-    private MonitorService monitorService;
+        @Mock
+        private UrlSafetyValidator urlSafetyValidator;
 
-    private Monitor sampleMonitor() {
-        return new Monitor("Old name", "https://example.com/api",
-                HttpMethod.GET, 60, 3000, 200);
-    }
+        @InjectMocks
+        private MonitorService monitorService;
 
-    // ---------- create ----------
+        private Monitor sampleMonitor() {
+                return new Monitor("Old name", "https://example.com/api",
+                                HttpMethod.GET, 60, 3000, 200);
+        }
 
-    @Test
-    @DisplayName("create: method aur expectedStatus na ho toh defaults (GET, 200) lagne chahiye")
-    void create_appliesDefaults() {
-        // Arrange
-        CreateMonitorRequest request = new CreateMonitorRequest(
-                "Inventory API", "https://example.com/inventory",
-                null, 60, 3000, null);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        // ---------- create ----------
 
-        // Act
-        MonitorResponse response = monitorService.create(request);
+        @Test
+        @DisplayName("create: method aur expectedStatus na ho toh defaults (GET, 200) lagne chahiye")
+        void create_appliesDefaults() {
+                // Arrange
+                CreateMonitorRequest request = new CreateMonitorRequest(
+                                "Inventory API", "https://example.com/inventory",
+                                null, 60, 3000, null);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Assert
-        assertThat(response.method()).isEqualTo(HttpMethod.GET);
-        assertThat(response.expectedStatus()).isEqualTo(200);
-        assertThat(response.name()).isEqualTo("Inventory API");
-    }
+                // Act
+                MonitorResponse response = monitorService.create(request);
 
-    @Test
-    @DisplayName("create: diye gaye values defaults ko override karne chahiye")
-    void create_usesProvidedValues() {
-        CreateMonitorRequest request = new CreateMonitorRequest(
-                "Price API", "https://example.com/price",
-                HttpMethod.POST, 30, 2000, 201);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                // Assert
+                assertThat(response.method()).isEqualTo(HttpMethod.GET);
+                assertThat(response.expectedStatus()).isEqualTo(200);
+                assertThat(response.name()).isEqualTo("Inventory API");
+        }
 
-        MonitorResponse response = monitorService.create(request);
+        @Test
+        @DisplayName("create: diye gaye values defaults ko override karne chahiye")
+        void create_usesProvidedValues() {
+                CreateMonitorRequest request = new CreateMonitorRequest(
+                                "Price API", "https://example.com/price",
+                                HttpMethod.POST, 30, 2000, 201);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(response.method()).isEqualTo(HttpMethod.POST);
-        assertThat(response.expectedStatus()).isEqualTo(201);
-        assertThat(response.intervalSeconds()).isEqualTo(30);
-    }
+                MonitorResponse response = monitorService.create(request);
 
-    // ---------- get ----------
+                assertThat(response.method()).isEqualTo(HttpMethod.POST);
+                assertThat(response.expectedStatus()).isEqualTo(201);
+                assertThat(response.intervalSeconds()).isEqualTo(30);
+        }
 
-    @Test
-    @DisplayName("getById: monitor na mile toh ResourceNotFoundException")
-    void getById_notFound_throws() {
-        when(monitorRepository.getByIdOrThrow(999L))
-                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
+        // ---------- get ----------
 
-        assertThatThrownBy(() -> monitorService.getById(999L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("999");
-    }
+        @Test
+        @DisplayName("getById: monitor na mile toh ResourceNotFoundException")
+        void getById_notFound_throws() {
+                when(monitorRepository.getByIdOrThrow(999L))
+                                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
 
-    // ---------- update ----------
+                assertThatThrownBy(() -> monitorService.getById(999L))
+                                .isInstanceOf(ResourceNotFoundException.class)
+                                .hasMessageContaining("999");
+        }
 
-    @Test
-    @DisplayName("update: sirf bheje gaye fields badlen, baaki same rahen (partial update)")
-    void update_changesOnlyProvidedFields() {
-        Monitor existing = sampleMonitor();
-        when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        // ---------- update ----------
 
-        UpdateMonitorRequest request = new UpdateMonitorRequest(
-                null, null, null, 30, null, null);
+        @Test
+        @DisplayName("update: sirf bheje gaye fields badlen, baaki same rahen (partial update)")
+        void update_changesOnlyProvidedFields() {
+                Monitor existing = sampleMonitor();
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        MonitorResponse response = monitorService.update(1L, request);
+                UpdateMonitorRequest request = new UpdateMonitorRequest(
+                                null, null, null, 30, null, null);
 
-        assertThat(response.intervalSeconds()).isEqualTo(30);   // badla
-        assertThat(response.name()).isEqualTo("Old name");      // same
-        assertThat(response.url()).isEqualTo("https://example.com/api"); // same
-        assertThat(response.timeoutMs()).isEqualTo(3000);       // same
-    }
+                MonitorResponse response = monitorService.update(1L, request);
 
-    @Test
-    @DisplayName("update: monitor na mile toh exception aur save kabhi call na ho")
-    void update_notFound_throwsAndDoesNotSave() {
-        when(monitorRepository.getByIdOrThrow(999L))
-                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
+                assertThat(response.intervalSeconds()).isEqualTo(30); // badla
+                assertThat(response.name()).isEqualTo("Old name"); // same
+                assertThat(response.url()).isEqualTo("https://example.com/api"); // same
+                assertThat(response.timeoutMs()).isEqualTo(3000); // same
+        }
 
-        UpdateMonitorRequest request = new UpdateMonitorRequest(
-                "New", null, null, null, null, null);
+        @Test
+        @DisplayName("update: monitor na mile toh exception aur save kabhi call na ho")
+        void update_notFound_throwsAndDoesNotSave() {
+                when(monitorRepository.getByIdOrThrow(999L))
+                                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
 
-        assertThatThrownBy(() -> monitorService.update(999L, request))
-                .isInstanceOf(ResourceNotFoundException.class);
+                UpdateMonitorRequest request = new UpdateMonitorRequest(
+                                "New", null, null, null, null, null);
 
-        verify(monitorRepository, never()).save(any());
-    }
+                assertThatThrownBy(() -> monitorService.update(999L, request))
+                                .isInstanceOf(ResourceNotFoundException.class);
 
-    // ---------- pause / resume ----------
+                verify(monitorRepository, never()).save(any());
+        }
 
-    @Test
-    @DisplayName("pause: enabled false hona chahiye aur save call hona chahiye")
-    void pause_disablesMonitor() {
-        Monitor existing = sampleMonitor();
-        when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        // ---------- pause / resume ----------
 
-        MonitorResponse response = monitorService.pause(1L);
+        @Test
+        @DisplayName("pause: enabled false hona chahiye aur save call hona chahiye")
+        void pause_disablesMonitor() {
+                Monitor existing = sampleMonitor();
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(response.enabled()).isFalse();
-        verify(monitorRepository).save(existing);
-    }
+                MonitorResponse response = monitorService.pause(1L);
 
-    @Test
-    @DisplayName("pause: dobara call karne par bhi result same (idempotent)")
-    void pause_isIdempotent() {
-        Monitor existing = sampleMonitor();
-        existing.setEnabled(false); // pehle se paused
-        when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                assertThat(response.enabled()).isFalse();
+                verify(monitorRepository).save(existing);
+        }
 
-        MonitorResponse response = monitorService.pause(1L);
+        @Test
+        @DisplayName("pause: dobara call karne par bhi result same (idempotent)")
+        void pause_isIdempotent() {
+                Monitor existing = sampleMonitor();
+                existing.setEnabled(false); // pehle se paused
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(response.enabled()).isFalse();
-    }
+                MonitorResponse response = monitorService.pause(1L);
 
-    @Test
-    @DisplayName("resume: enabled true hona chahiye")
-    void resume_enablesMonitor() {
-        Monitor existing = sampleMonitor();
-        existing.setEnabled(false);
-        when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
-        when(monitorRepository.save(any(Monitor.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                assertThat(response.enabled()).isFalse();
+        }
 
-        MonitorResponse response = monitorService.resume(1L);
+        @Test
+        @DisplayName("resume: enabled true hona chahiye")
+        void resume_enablesMonitor() {
+                Monitor existing = sampleMonitor();
+                existing.setEnabled(false);
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(response.enabled()).isTrue();
-    }
+                MonitorResponse response = monitorService.resume(1L);
 
-    // ---------- delete ----------
+                assertThat(response.enabled()).isTrue();
+        }
 
-    @Test
-    @DisplayName("delete: sahi monitor repository.delete ko pass hona chahiye")
-    void delete_deletesMonitor() {
-        Monitor existing = sampleMonitor();
-        when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+        // ---------- delete ----------
 
-        monitorService.delete(1L);
+        @Test
+        @DisplayName("delete: sahi monitor repository.delete ko pass hona chahiye")
+        void delete_deletesMonitor() {
+                Monitor existing = sampleMonitor();
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
 
-        ArgumentCaptor<Monitor> captor = ArgumentCaptor.forClass(Monitor.class);
-        verify(monitorRepository).delete(captor.capture());
-        assertThat(captor.getValue().getName()).isEqualTo("Old name");
-    }
+                monitorService.delete(1L);
 
-    @Test
-    @DisplayName("delete: monitor na mile toh delete kabhi call na ho")
-    void delete_notFound_neverDeletes() {
-        when(monitorRepository.getByIdOrThrow(999L))
-                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
+                ArgumentCaptor<Monitor> captor = ArgumentCaptor.forClass(Monitor.class);
+                verify(monitorRepository).delete(captor.capture());
+                assertThat(captor.getValue().getName()).isEqualTo("Old name");
+        }
 
-        assertThatThrownBy(() -> monitorService.delete(999L))
-                .isInstanceOf(ResourceNotFoundException.class);
+        @Test
+        @DisplayName("delete: monitor na mile toh delete kabhi call na ho")
+        void delete_notFound_neverDeletes() {
+                when(monitorRepository.getByIdOrThrow(999L))
+                                .thenThrow(new ResourceNotFoundException("Monitor", 999L));
 
-        verify(monitorRepository, never()).delete(any());
-    }
+                assertThatThrownBy(() -> monitorService.delete(999L))
+                                .isInstanceOf(ResourceNotFoundException.class);
+
+                verify(monitorRepository, never()).delete(any());
+        }
+
+        @Test
+        @DisplayName("create: blocked URL par InvalidRequestException aur save kabhi nahi")
+        void create_blockedUrl_rejected() {
+                when(urlSafetyValidator.validate("http://169.254.169.254/"))
+                                .thenThrow(new UnsafeUrlException(UnsafeUrlException.Reason.BLOCKED_TARGET,
+                                                "url points to a disallowed address"));
+
+                CreateMonitorRequest request = new CreateMonitorRequest(
+                                "Evil", "http://169.254.169.254/", null, 60, 3000, null);
+
+                assertThatThrownBy(() -> monitorService.create(request))
+                                .isInstanceOf(InvalidRequestException.class);
+                verify(monitorRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("create: abhi resolve na hone wala host save ho jaye")
+        void create_unresolvableUrl_isSaved() {
+                when(urlSafetyValidator.validate("https://not-deployed-yet.example"))
+                                .thenThrow(new UnsafeUrlException(UnsafeUrlException.Reason.UNRESOLVABLE,
+                                                "host could not be resolved"));
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                CreateMonitorRequest request = new CreateMonitorRequest(
+                                "Later", "https://not-deployed-yet.example", null, 60, 3000, null);
+
+                assertThat(monitorService.create(request).name()).isEqualTo("Later");
+        }
 }

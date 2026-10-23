@@ -9,7 +9,7 @@ import com.apisentinel.config.NotificationProperties;
 import com.apisentinel.utils.IncidentEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;

@@ -47,3 +47,12 @@ notification:
     timeout-ms: 5000
     max-attempts: 3
     retry-backoff-ms: 1000
+security:
+    ssrf:
+      allow-private-targets: ${SENTINEL_ALLOW_PRIVATE_TARGETS:true}
+      max-redirects: 3
+
+spring:
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false

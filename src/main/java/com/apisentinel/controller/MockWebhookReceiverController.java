@@ -21,4 +21,15 @@ public class MockWebhookReceiverController {
         log.info("MOCK webhook received status={} signature={} body={}", status, signature, body);
         return ResponseEntity.status(status).build();
     }
+
+    @GetMapping("/redirect")
+    public ResponseEntity<Void> redirect(@RequestParam String to,
+            @RequestParam(defaultValue = "302") int status) {
+        return ResponseEntity.status(status).header("Location", to).build();
+    }
+
+    @GetMapping("/redirect-loop")
+    public ResponseEntity<Void> redirectLoop() {
+        return ResponseEntity.status(302).header("Location", "/mock/redirect-loop").build();
+    }
 }

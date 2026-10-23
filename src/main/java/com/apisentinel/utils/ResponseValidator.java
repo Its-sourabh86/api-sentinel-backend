@@ -122,6 +122,7 @@ public class ResponseValidator {
             case INVALID_URL -> FailureCode.INVALID_URL;
             case RESPONSE_TOO_LARGE -> FailureCode.RESPONSE_TOO_LARGE;
             case ERROR, RESPONSE_RECEIVED -> FailureCode.PROBE_ERROR;
+            case BLOCKED_TARGET -> FailureCode.BLOCKED_TARGET;
         };
     }
 }
