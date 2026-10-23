@@ -2,27 +2,42 @@ package com.apisentinel.service;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import com.apisentinel.exception.InvalidRequestException;
 import com.apisentinel.exception.ResourceNotFoundException;
+import com.apisentinel.controller.MockWebhookReceiverController;
 import com.apisentinel.dto.request.CreateMonitorRequest;
 import com.apisentinel.dto.request.UpdateMonitorRequest;
 import com.apisentinel.dto.response.MonitorResponse;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.HttpMethod;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.security.UnsafeUrlException;
+import com.apisentinel.security.UrlSafetyValidator;
+
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MonitorService {
 
-    private final MonitorRepository monitorRepository;
 
-    public MonitorService(MonitorRepository monitorRepository) {
+    private static final Logger log = LoggerFactory.getLogger(MonitorService.class);
+
+
+    private final MonitorRepository monitorRepository;
+    private final UrlSafetyValidator urlSafetyValidator;
+
+    public MonitorService(MonitorRepository monitorRepository, UrlSafetyValidator urlSafetyValidator) {
         this.monitorRepository = monitorRepository;
+        this.urlSafetyValidator = urlSafetyValidator;
     }
 
     @Transactional
     public MonitorResponse create(CreateMonitorRequest request) {
+        assertUrlAllowed(request.url());
         HttpMethod method = request.method() != null ? request.method() : HttpMethod.GET;
         Integer expectedStatus = request.expectedStatus() != null ? request.expectedStatus() : 200;
 
@@ -54,7 +69,9 @@ public class MonitorService {
     @Transactional
     public MonitorResponse update(Long id, UpdateMonitorRequest request) {
         Monitor monitor = monitorRepository.getByIdOrThrow(id);
-
+        if (request.url() != null) {
+            assertUrlAllowed(request.url());
+        }
         if (request.name() != null)
             monitor.setName(request.name());
         if (request.url() != null)
@@ -95,5 +112,18 @@ public class MonitorService {
     public void delete(Long id) {
         Monitor monitor = monitorRepository.getByIdOrThrow(id);
         monitorRepository.delete(monitor);
+    }
+
+    private void assertUrlAllowed(String url) {
+        try {
+            urlSafetyValidator.validate(url);
+        } catch (UnsafeUrlException e) {
+            if (e.reason() == UnsafeUrlException.Reason.UNRESOLVABLE) {
+                // Service abhi deploy na hui ho sakti hai. Probe time par dobara check hoga.
+                log.info("Monitor URL host does not resolve right now, saving anyway");
+                return;
+            }
+            throw new InvalidRequestException(e.getMessage());
+        }
     }
 }

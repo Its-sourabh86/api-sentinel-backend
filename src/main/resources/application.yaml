@@ -1,4 +1,3 @@
-
 server:
   port: 8081
 
@@ -9,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sentinel}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:mr.cs193}
+    password: ${DB_PASSWORD:}
 
   jpa:
     hibernate:
@@ -18,8 +17,8 @@ spring:
 
   flyway:
     enabled: true
-  
-  logging:
+
+logging:
   level:
     root: INFO
     com.apisentinel: DEBUG
@@ -35,4 +34,17 @@ sentinel:
     batch-size: 50
     worker-threads: 10
     queue-capacity: 100
-
+  incident:
+    failure-threshold: 3
+    recovery-threshold: 2
+  notification:
+    enabled: true
+    webhook-url: ${SENTINEL_WEBHOOK_URL:http://localhost:8080/mock/webhook}
+    webhook-secret: ${SENTINEL_WEBHOOK_SECRET:dev-only-secret}
+    timeout-ms: 5000
+    max-attempts: 3
+    retry-backoff-ms: 1000
+  security:
+    ssrf:
+      allow-private-targets: ${SENTINEL_ALLOW_PRIVATE_TARGETS:true}
+      max-redirects: 3

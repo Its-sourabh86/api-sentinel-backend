@@ -6,5 +6,6 @@ public enum ProbeOutcome {
     CONNECTION_FAILED,
     INVALID_URL,
     RESPONSE_TOO_LARGE,
-    ERROR
+    ERROR,
+    BLOCKED_TARGET
 }

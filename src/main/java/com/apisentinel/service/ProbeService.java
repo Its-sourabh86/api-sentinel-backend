@@ -32,24 +32,28 @@ public class ProbeService {
     private final HttpProbeExecutor probeExecutor;
     private final ResponseValidator responseValidator;
     private final CheckResultService checkResultService;
+    private final IncidentService incidentService;
 
     public ProbeService(MonitorRepository monitorRepository,
-                        MonitorAssertionRepository assertionRepository,
-                        HttpProbeExecutor probeExecutor,
-                        ResponseValidator responseValidator,
-                        CheckResultService checkResultService) {
+            MonitorAssertionRepository assertionRepository,
+            HttpProbeExecutor probeExecutor,
+            ResponseValidator responseValidator,
+            CheckResultService checkResultService,
+            IncidentService incidentService) {
         this.monitorRepository = monitorRepository;
         this.assertionRepository = assertionRepository;
         this.probeExecutor = probeExecutor;
         this.responseValidator = responseValidator;
         this.checkResultService = checkResultService;
+        this.incidentService = incidentService;
     }
 
     public ProbeRunResponse runNow(Long monitorId) {
         return execute(monitorId, TriggerType.MANUAL);
     }
 
-    // Jaan-boojh kar @Transactional nahi: HTTP call ke dauran DB connection khula nahi rakhna
+    // Jaan-boojh kar @Transactional nahi: HTTP call ke dauran DB connection khula
+    // nahi rakhna
     public ProbeRunResponse execute(Long monitorId, TriggerType trigger) {
         MDC.put("monitorId", String.valueOf(monitorId));
         try {
@@ -66,10 +70,17 @@ public class ProbeService {
             ProbeResult result = probeExecutor.execute(new ProbeRequest(
                     monitor.getUrl(), monitor.getHttpMethod(), monitor.getTimeoutMs()));
 
-            ValidationReport report =
-                    responseValidator.validate(result, monitor.getExpectedStatus(),monitor.getResponseSchema(), specs);
+            ValidationReport report = responseValidator.validate(result, monitor.getExpectedStatus(),
+                    monitor.getResponseSchema(), specs);
 
             checkResultService.record(monitorId, startedAt, result, report, trigger);
+
+            try {
+                incidentService.evaluate(monitorId, report);
+            } catch (Exception e) {
+                // Incident logic fail ho toh bhi check result save reh chuka hai
+                log.error("Incident evaluation failed", e);
+            }
 
             if (report.status() == CheckStatus.PASSED) {
                 log.info("Check PASSED httpStatus={} durationMs={} trigger={}",
