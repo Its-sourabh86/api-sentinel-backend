@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sentinel}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -39,7 +39,7 @@ sentinel:
     recovery-threshold: 2
   notification:
     enabled: true
-    webhook-url: ${SENTINEL_WEBHOOK_URL:http://localhost:8080/mock/webhook}
+    webhook-url: ${SENTINEL_WEBHOOK_URL:http://localhost:8081/mock/webhook}
     webhook-secret: ${SENTINEL_WEBHOOK_SECRET:dev-only-secret}
     timeout-ms: 5000
     max-attempts: 3
