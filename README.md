@@ -139,4 +139,16 @@ Being honest about what this is not:
 - **No dashboard UI** yet.
 - Not load-tested yet; no throughput numbers are claimed.
 - Manual `/run` currently counts toward incidents; pausing a monitor with an open incident does not auto-resolve it.
- 
+
+
+### Demo: before and after
+
+The mock API returns HTTP 200 with `stock = 0`.
+
+**Before** (no business rule): a plain uptime check sees `200 OK` and reports success.
+
+![Before: PASSED](docs/images/before.png)
+
+**After** (rule `$.data.stock >= 10`): Sentinel catches the silent failure and explains why.
+
+![After: FAILED](docs/images/after.png)
