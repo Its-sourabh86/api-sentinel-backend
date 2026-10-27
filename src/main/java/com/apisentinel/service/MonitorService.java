@@ -29,10 +29,12 @@ public class MonitorService {
 
     private final MonitorRepository monitorRepository;
     private final UrlSafetyValidator urlSafetyValidator;
+    private final IncidentService incidentService;
 
-    public MonitorService(MonitorRepository monitorRepository, UrlSafetyValidator urlSafetyValidator) {
+    public MonitorService(MonitorRepository monitorRepository, UrlSafetyValidator urlSafetyValidator,IncidentService incidentService) {
         this.monitorRepository = monitorRepository;
         this.urlSafetyValidator = urlSafetyValidator;
+        this.incidentService = incidentService;
     }
 
     @Transactional
@@ -96,6 +98,8 @@ public class MonitorService {
         Monitor monitor = monitorRepository.getByIdOrThrow(id);
         monitor.setEnabled(false);
         Monitor saved = monitorRepository.save(monitor);
+        incidentService.resolveOnPause(id);
+        log.info("Monitor paused id={}", id);
         return MonitorResponse.from(saved);
     }
 

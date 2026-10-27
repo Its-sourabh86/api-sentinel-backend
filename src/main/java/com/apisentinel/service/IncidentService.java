@@ -18,6 +18,7 @@ import com.apisentinel.entity.Incident;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.CheckStatus;
 import com.apisentinel.enums.IncidentStatus;
+import com.apisentinel.enums.TriggerType;
 import com.apisentinel.repository.CheckResultRepository;
 import com.apisentinel.repository.IncidentRepository;
 import com.apisentinel.repository.MonitorRepository;
@@ -67,6 +68,10 @@ public class IncidentService {
         Optional<Monitor> locked = monitorRepository.findByIdForUpdate(monitorId);
         if (locked.isEmpty()) {
             return; // monitor beech mein delete ho gaya
+        }
+
+        if (!locked.get().isEnabled()) {
+            return; // monitor paused hai, naya incident nahi
         }
         String monitorName = locked.get().getName();
 
@@ -128,7 +133,8 @@ public class IncidentService {
      */
     private boolean lastResultsAll(Long monitorId, int n, CheckStatus expected) {
         List<CheckResult> recent = checkResultRepository
-                .findByMonitorIdOrderByStartedAtDescIdDesc(monitorId, PageRequest.of(0, n));
+                .findByMonitorIdAndTriggerTypeOrderByStartedAtDescIdDesc(
+                        monitorId, TriggerType.SCHEDULED, PageRequest.of(0, n));
         return recent.size() == n
                 && recent.stream().allMatch(r -> r.getResultStatus() == expected);
     }
@@ -139,5 +145,16 @@ public class IncidentService {
         return reason.length() <= MAX_REASON_LENGTH
                 ? reason
                 : reason.substring(0, MAX_REASON_LENGTH - 3) + "...";
+    }
+
+    @Transactional
+    public void resolveOnPause(Long monitorId) {
+        incidentRepository.findByMonitorIdAndStatus(monitorId, IncidentStatus.OPEN)
+                .ifPresent(incident -> {
+                    incident.resolve(Instant.now(clock));
+                    incidentRepository.save(incident);
+                    log.info("Incident closed because monitor was paused incidentId={}",
+                            incident.getId());
+                });
     }
 }

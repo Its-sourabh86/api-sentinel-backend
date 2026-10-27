@@ -10,6 +10,7 @@ import com.apisentinel.enums.HttpMethod;
 import com.apisentinel.repository.MonitorRepository;
 import com.apisentinel.security.UnsafeUrlException;
 import com.apisentinel.security.UrlSafetyValidator;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,9 @@ class MonitorServiceTest {
 
         @Mock
         private UrlSafetyValidator urlSafetyValidator;
+
+        @Mock
+        private IncidentService incidentService;
 
         @InjectMocks
         private MonitorService monitorService;
@@ -142,6 +146,7 @@ class MonitorServiceTest {
 
                 assertThat(response.enabled()).isFalse();
                 verify(monitorRepository).save(existing);
+                verify(incidentService).resolveOnPause(1L);
         }
 
         @Test
@@ -156,6 +161,20 @@ class MonitorServiceTest {
                 MonitorResponse response = monitorService.pause(1L);
 
                 assertThat(response.enabled()).isFalse();
+                verify(incidentService).resolveOnPause(1L);
+        }
+
+        @Test
+        @DisplayName("pause: incidentService.resolveOnPause call hona chahiye")
+        void pause_resolvesIncidentOnPause() {
+                Monitor existing = sampleMonitor();
+                when(monitorRepository.getByIdOrThrow(1L)).thenReturn(existing);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                monitorService.pause(1L);
+
+                verify(incidentService).resolveOnPause(1L);
         }
 
         @Test

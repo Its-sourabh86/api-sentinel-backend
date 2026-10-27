@@ -75,11 +75,12 @@ public class ProbeService {
 
             checkResultService.record(monitorId, startedAt, result, report, trigger);
 
-            try {
-                incidentService.evaluate(monitorId, report);
-            } catch (Exception e) {
-                // Incident logic fail ho toh bhi check result save reh chuka hai
-                log.error("Incident evaluation failed", e);
+            if (trigger == TriggerType.SCHEDULED) {
+                try {
+                    incidentService.evaluate(monitorId, report);
+                } catch (Exception e) {
+                    log.error("Incident evaluation failed", e);
+                }
             }
 
             if (report.status() == CheckStatus.PASSED) {

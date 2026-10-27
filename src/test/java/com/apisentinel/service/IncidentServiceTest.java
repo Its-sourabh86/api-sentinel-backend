@@ -19,6 +19,7 @@ import com.apisentinel.enums.TriggerType;
 import com.apisentinel.repository.CheckResultRepository;
 import com.apisentinel.repository.IncidentRepository;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.utils.IncidentEvent;
 import com.apisentinel.utils.ValidationReport;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -70,7 +71,7 @@ class IncidentServiceTest {
         monitorExists();
         when(incidentRepository.findByMonitorIdAndStatus(1L, IncidentStatus.OPEN))
                 .thenReturn(Optional.empty());
-        when(checkResultRepository.findByMonitorIdOrderByStartedAtDescIdDesc(any(), any()))
+        when(checkResultRepository.findByMonitorIdAndTriggerTypeOrderByStartedAtDescIdDesc(any(), any(), any()))
                 .thenReturn(List.of(result(CheckStatus.FAILED), result(CheckStatus.FAILED),
                         result(CheckStatus.FAILED)));
 
@@ -85,7 +86,7 @@ class IncidentServiceTest {
         monitorExists();
         when(incidentRepository.findByMonitorIdAndStatus(1L, IncidentStatus.OPEN))
                 .thenReturn(Optional.empty());
-        when(checkResultRepository.findByMonitorIdOrderByStartedAtDescIdDesc(any(), any()))
+        when(checkResultRepository.findByMonitorIdAndTriggerTypeOrderByStartedAtDescIdDesc(any(), any(), any()))
                 .thenReturn(List.of(result(CheckStatus.FAILED), result(CheckStatus.FAILED),
                         result(CheckStatus.PASSED)));
 
@@ -115,7 +116,7 @@ class IncidentServiceTest {
         Incident open = Incident.open(1L, FailureCode.JSON_ASSERTION_FAILED, "stock 0", 3, NOW);
         when(incidentRepository.findByMonitorIdAndStatus(1L, IncidentStatus.OPEN))
                 .thenReturn(Optional.of(open));
-        when(checkResultRepository.findByMonitorIdOrderByStartedAtDescIdDesc(any(), any()))
+        when(checkResultRepository.findByMonitorIdAndTriggerTypeOrderByStartedAtDescIdDesc(any(), any(), any()))
                 .thenReturn(List.of(result(CheckStatus.PASSED), result(CheckStatus.PASSED)));
 
         service().evaluate(1L, ValidationReport.passed(List.of()));
@@ -131,11 +132,24 @@ class IncidentServiceTest {
         Incident open = Incident.open(1L, FailureCode.JSON_ASSERTION_FAILED, "stock 0", 3, NOW);
         when(incidentRepository.findByMonitorIdAndStatus(1L, IncidentStatus.OPEN))
                 .thenReturn(Optional.of(open));
-        when(checkResultRepository.findByMonitorIdOrderByStartedAtDescIdDesc(any(), any()))
+        when(checkResultRepository.findByMonitorIdAndTriggerTypeOrderByStartedAtDescIdDesc(any(), any(), any()))
                 .thenReturn(List.of(result(CheckStatus.PASSED), result(CheckStatus.FAILED)));
 
         service().evaluate(1L, ValidationReport.passed(List.of()));
 
         assertThat(open.getStatus()).isEqualTo(IncidentStatus.OPEN);
+    }
+
+    @Test
+    @DisplayName("pause par OPEN incident resolve ho jaye, event publish na ho")
+    void resolvesOnPause() {
+        Incident open = Incident.open(1L, FailureCode.JSON_ASSERTION_FAILED, "stock 0", 3, NOW);
+        when(incidentRepository.findByMonitorIdAndStatus(1L, IncidentStatus.OPEN))
+                .thenReturn(Optional.of(open));
+
+        service().resolveOnPause(1L);
+
+        assertThat(open.getStatus()).isEqualTo(IncidentStatus.RESOLVED);
+        verify(eventPublisher, never()).publishEvent(any(IncidentEvent.class));
     }
 }
