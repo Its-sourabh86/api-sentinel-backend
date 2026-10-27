@@ -122,6 +122,7 @@ Modular monolith: one Spring Boot app, separated into packages by feature.
 - **Alerts after commit** (`AFTER_COMMIT`), on a separate pool, so a slow webhook never blocks monitoring.
 - **SSRF:** the resolved IP is validated, not the hostname. Redirects are followed manually and every hop is re-validated.
 - **Secrets** come from environment variables. Responses, URLs and tokens are never logged.
+- **Incidents are driven only by scheduled checks.** Manual runs are stored in history but never open or resolve incidents. Pausing a monitor closes its open incident without sending an alert.
 ## Tests
  
 - 75 automated tests (unit tests with Mockito, real HTTP servers for the prober and webhook sender, Testcontainers PostgreSQL for the Spring context).
@@ -138,7 +139,6 @@ Being honest about what this is not:
 - **No authentication** on the API yet.
 - **No dashboard UI** yet.
 - Not load-tested yet; no throughput numbers are claimed.
-- Manual `/run` currently counts toward incidents; pausing a monitor with an open incident does not auto-resolve it.
 
 
 ### Demo: before and after
