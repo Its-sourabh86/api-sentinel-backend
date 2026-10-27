@@ -129,6 +129,13 @@ Modular monolith: one Spring Boot app, separated into packages by feature.
 - Line coverage (JaCoCo): 53.8% (measured with `./mvnw clean test`; controllers and orchestration services are not yet covered)
 - CI runs on every push via GitHub Actions.
 Run locally: `./mvnw clean verify` (Docker must be running for Testcontainers).
+
+## Performance
+
+Measured on a single laptop with Docker (see [docs/load-test-results.md](docs/load-test-results.md) for setup and caveats):
+
+- **Scheduler:** 600 checks/min sustained with 200 monitors (limited by the configured batch size, not hardware).
+- **API:** p95 latency 119 ms at ~930 req/s with 50 concurrent users, 0% errors.
  
 ## Limitations and roadmap
  
