@@ -125,7 +125,7 @@ Modular monolith: one Spring Boot app, separated into packages by feature.
 ## Tests
  
 - 75 automated tests (unit tests with Mockito, real HTTP servers for the prober and webhook sender, Testcontainers PostgreSQL for the Spring context).
-- Line coverage (JaCoCo): `[TBD]`
+- Line coverage (JaCoCo): 53.8% (measured with `./mvnw clean test`; controllers and orchestration services are not yet covered)
 - CI runs on every push via GitHub Actions.
 Run locally: `./mvnw clean verify` (Docker must be running for Testcontainers).
  
@@ -152,3 +152,5 @@ The mock API returns HTTP 200 with `stock = 0`.
 **After** (rule `$.data.stock >= 10`): Sentinel catches the silent failure and explains why.
 
 ![After: FAILED](docs/images/after.png)
+
+
