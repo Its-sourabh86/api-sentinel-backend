@@ -102,4 +102,29 @@ public class GlobalExceptionHandler {
 
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
         }
+
+        @ExceptionHandler(ConflictException.class)
+        public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
+                ApiError body = ApiError.of(
+                                HttpStatus.CONFLICT.value(),
+                                "Conflict",
+                                ex.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
+
+        @ExceptionHandler(AuthenticationFailedException.class)
+        public ResponseEntity<ApiError> handleAuthFailed(AuthenticationFailedException ex,
+                        HttpServletRequest request) {
+                ApiError body = ApiError.of(
+                                HttpStatus.UNAUTHORIZED.value(),
+                                "Unauthorized",
+                                ex.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .header("WWW-Authenticate", "Bearer")
+                                .body(body);
+        }
 }
