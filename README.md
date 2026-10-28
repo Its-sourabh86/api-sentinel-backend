@@ -122,12 +122,20 @@ Modular monolith: one Spring Boot app, separated into packages by feature.
 - **Alerts after commit** (`AFTER_COMMIT`), on a separate pool, so a slow webhook never blocks monitoring.
 - **SSRF:** the resolved IP is validated, not the hostname. Redirects are followed manually and every hop is re-validated.
 - **Secrets** come from environment variables. Responses, URLs and tokens are never logged.
+- **Incidents are driven only by scheduled checks.** Manual runs are stored in history but never open or resolve incidents. Pausing a monitor closes its open incident without sending an alert.
 ## Tests
  
 - 75 automated tests (unit tests with Mockito, real HTTP servers for the prober and webhook sender, Testcontainers PostgreSQL for the Spring context).
-- Line coverage (JaCoCo): `[TBD]`
+- Line coverage (JaCoCo): 53.8% (measured with `./mvnw clean test`; controllers and orchestration services are not yet covered)
 - CI runs on every push via GitHub Actions.
 Run locally: `./mvnw clean verify` (Docker must be running for Testcontainers).
+
+## Performance
+
+Measured on a single laptop with Docker (see [docs/load-test-results.md](docs/load-test-results.md) for setup and caveats):
+
+- **Scheduler:** 600 checks/min sustained with 200 monitors (limited by the configured batch size, not hardware).
+- **API:** p95 latency 119 ms at ~930 req/s with 50 concurrent users, 0% errors.
  
 ## Limitations and roadmap
  
@@ -138,7 +146,6 @@ Being honest about what this is not:
 - **No authentication** on the API yet.
 - **No dashboard UI** yet.
 - Not load-tested yet; no throughput numbers are claimed.
-- Manual `/run` currently counts toward incidents; pausing a monitor with an open incident does not auto-resolve it.
 
 
 ### Demo: before and after
@@ -152,3 +159,5 @@ The mock API returns HTTP 200 with `stock = 0`.
 **After** (rule `$.data.stock >= 10`): Sentinel catches the silent failure and explains why.
 
 ![After: FAILED](docs/images/after.png)
+
+
