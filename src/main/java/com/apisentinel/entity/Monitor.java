@@ -45,6 +45,9 @@ public class Monitor {
     @Column(name = "next_run_at", nullable = false)
     private Instant nextRunAt;
 
+    @Column(name = "owner_id", updatable = false)
+    private Long ownerId;
+
     // JPA ko ye no-argument constructor chahiye
     protected Monitor() {
     }
@@ -163,6 +166,12 @@ public class Monitor {
     /** Agla check turant chalne ke liye (create, resume, interval change par). */
     public void rescheduleNow() {
         this.nextRunAt = Instant.now();
+    }
+
+    public Long getOwnerId() { return ownerId; }
+
+    public void assignOwner(Long ownerId) {
+    this.ownerId = ownerId;
     }
 
 }

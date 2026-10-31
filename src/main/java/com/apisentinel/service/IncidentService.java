@@ -18,10 +18,12 @@ import com.apisentinel.entity.Incident;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.CheckStatus;
 import com.apisentinel.enums.IncidentStatus;
+import com.apisentinel.enums.Role;
 import com.apisentinel.enums.TriggerType;
 import com.apisentinel.repository.CheckResultRepository;
 import com.apisentinel.repository.IncidentRepository;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.security.AuthenticatedUser;
 import com.apisentinel.utils.IncidentEvent;
 import com.apisentinel.utils.ValidationReport;
 
@@ -108,21 +110,26 @@ public class IncidentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<IncidentResponse> list(IncidentStatus status, Long monitorId,
-            int page, int size) {
+    public PageResponse<IncidentResponse> list(AuthenticatedUser user, IncidentStatus status,
+            Long monitorId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0),
                 Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
                 Sort.by(Sort.Direction.DESC, "openedAt"));
 
         Page<Incident> result;
-        if (status != null && monitorId != null) {
-            result = incidentRepository.findByStatusAndMonitorId(status, monitorId, pageable);
-        } else if (status != null) {
-            result = incidentRepository.findByStatus(status, pageable);
-        } else if (monitorId != null) {
-            result = incidentRepository.findByMonitorId(monitorId, pageable);
+        if (monitorId != null) {
+            // Controller pehle hi ownership check kar chuka hai
+            result = status != null
+                    ? incidentRepository.findByStatusAndMonitorId(status, monitorId, pageable)
+                    : incidentRepository.findByMonitorId(monitorId, pageable);
+        } else if (user.role() == Role.ADMIN) {
+            result = status != null
+                    ? incidentRepository.findByStatus(status, pageable)
+                    : incidentRepository.findAll(pageable);
         } else {
-            result = incidentRepository.findAll(pageable);
+            result = status != null
+                    ? incidentRepository.findForOwnerAndStatus(user.id(), status, pageable)
+                    : incidentRepository.findForOwner(user.id(), pageable);
         }
         return PageResponse.from(result, IncidentResponse::from);
     }

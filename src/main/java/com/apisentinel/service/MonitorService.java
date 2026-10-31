@@ -14,7 +14,9 @@ import com.apisentinel.dto.request.UpdateMonitorRequest;
 import com.apisentinel.dto.response.MonitorResponse;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.HttpMethod;
+import com.apisentinel.enums.Role;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.security.AuthenticatedUser;
 import com.apisentinel.security.UnsafeUrlException;
 import com.apisentinel.security.UrlSafetyValidator;
 
@@ -23,22 +25,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MonitorService {
 
-
     private static final Logger log = LoggerFactory.getLogger(MonitorService.class);
-
 
     private final MonitorRepository monitorRepository;
     private final UrlSafetyValidator urlSafetyValidator;
     private final IncidentService incidentService;
 
-    public MonitorService(MonitorRepository monitorRepository, UrlSafetyValidator urlSafetyValidator,IncidentService incidentService) {
+    public MonitorService(MonitorRepository monitorRepository, UrlSafetyValidator urlSafetyValidator,
+            IncidentService incidentService) {
         this.monitorRepository = monitorRepository;
         this.urlSafetyValidator = urlSafetyValidator;
         this.incidentService = incidentService;
     }
 
     @Transactional
-    public MonitorResponse create(CreateMonitorRequest request) {
+    public MonitorResponse create(CreateMonitorRequest request, Long ownerId) {
         assertUrlAllowed(request.url());
         HttpMethod method = request.method() != null ? request.method() : HttpMethod.GET;
         Integer expectedStatus = request.expectedStatus() != null ? request.expectedStatus() : 200;
@@ -52,7 +53,7 @@ public class MonitorService {
                 expectedStatus
 
         );
-
+        monitor.assignOwner(ownerId);
         Monitor saved = monitorRepository.save(monitor);
         return MonitorResponse.from(saved);
     }
@@ -64,8 +65,11 @@ public class MonitorService {
     }
 
     @Transactional(readOnly = true)
-    public List<MonitorResponse> getAll() {
-        return monitorRepository.findAll().stream().map(MonitorResponse::from).toList();
+    public List<MonitorResponse> getAll(AuthenticatedUser user) {
+        List<Monitor> monitors = user.role() == Role.ADMIN
+                ? monitorRepository.findAll()
+                : monitorRepository.findByOwnerId(user.id());
+        return monitors.stream().map(MonitorResponse::from).toList();
     }
 
     @Transactional

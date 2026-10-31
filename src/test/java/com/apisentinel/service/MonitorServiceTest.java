@@ -7,7 +7,9 @@ import com.apisentinel.dto.request.UpdateMonitorRequest;
 import com.apisentinel.dto.response.MonitorResponse;
 import com.apisentinel.entity.Monitor;
 import com.apisentinel.enums.HttpMethod;
+import com.apisentinel.enums.Role;
 import com.apisentinel.repository.MonitorRepository;
+import com.apisentinel.security.AuthenticatedUser;
 import com.apisentinel.security.UnsafeUrlException;
 import com.apisentinel.security.UrlSafetyValidator;
 
@@ -25,6 +27,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class MonitorServiceTest {
@@ -59,7 +63,7 @@ class MonitorServiceTest {
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
                 // Act
-                MonitorResponse response = monitorService.create(request);
+                MonitorResponse response = monitorService.create(request, 42L);
 
                 // Assert
                 assertThat(response.method()).isEqualTo(HttpMethod.GET);
@@ -76,7 +80,7 @@ class MonitorServiceTest {
                 when(monitorRepository.save(any(Monitor.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-                MonitorResponse response = monitorService.create(request);
+                MonitorResponse response = monitorService.create(request, 42L);
 
                 assertThat(response.method()).isEqualTo(HttpMethod.POST);
                 assertThat(response.expectedStatus()).isEqualTo(201);
@@ -228,7 +232,7 @@ class MonitorServiceTest {
                 CreateMonitorRequest request = new CreateMonitorRequest(
                                 "Evil", "http://169.254.169.254/", null, 60, 3000, null);
 
-                assertThatThrownBy(() -> monitorService.create(request))
+                assertThatThrownBy(() -> monitorService.create(request, 42L))
                                 .isInstanceOf(InvalidRequestException.class);
                 verify(monitorRepository, never()).save(any());
         }
@@ -245,6 +249,32 @@ class MonitorServiceTest {
                 CreateMonitorRequest request = new CreateMonitorRequest(
                                 "Later", "https://not-deployed-yet.example", null, 60, 3000, null);
 
-                assertThat(monitorService.create(request).name()).isEqualTo("Later");
+                assertThat(monitorService.create(request, 42L).name()).isEqualTo("Later");
+        }
+
+        @Test
+        @DisplayName("create: owner token wale user ka set ho")
+        void create_setsOwner() {
+                CreateMonitorRequest request = new CreateMonitorRequest(
+                                "A", "https://example.com/a", null, 60, 3000, null);
+                when(monitorRepository.save(any(Monitor.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                monitorService.create(request, 42L);
+
+                ArgumentCaptor<Monitor> captor = ArgumentCaptor.forClass(Monitor.class);
+                verify(monitorRepository).save(captor.capture());
+                assertThat(captor.getValue().getOwnerId()).isEqualTo(42L);
+        }
+
+        @Test
+        @DisplayName("getAll: user ko sirf apne, admin ko sab")
+        void getAll_scopedByRole() {
+                Monitor mine = new Monitor("Mine", "https://example.com/m", HttpMethod.GET, 60, 3000, 200);
+                when(monitorRepository.findByOwnerId(42L)).thenReturn(List.of(mine));
+                when(monitorRepository.findAll()).thenReturn(List.of(mine, mine));
+
+                assertThat(monitorService.getAll(new AuthenticatedUser(42L, Role.USER))).hasSize(1);
+                assertThat(monitorService.getAll(new AuthenticatedUser(1L, Role.ADMIN))).hasSize(2);
         }
 }

@@ -33,4 +33,6 @@ public interface MonitorRepository extends JpaRepository<Monitor, Long> {
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("SELECT m FROM Monitor m WHERE m.id = :id")
         Optional<Monitor> findByIdForUpdate(@Param("id") Long id);
+
+        List<Monitor> findByOwnerId(Long ownerId);
 }
