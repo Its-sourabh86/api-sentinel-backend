@@ -46,6 +46,8 @@ GROUP BY 1 ORDER BY 1;
 
 **Setup:** `loadtest/read-api.js`, 50 constant virtual users for 1 minute, each requesting `GET /api/v1/monitors/{id}/results?page=0&size=20` for a random monitor id (1 to 200). The scheduler was running in the background at the same time.
 
+*Measured with JWT authentication and per-monitor ownership checks enabled.*
+
 | Metric | Value |
 |---|---|
 | Total requests | 55,829 |
