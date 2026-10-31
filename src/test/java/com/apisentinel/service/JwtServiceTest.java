@@ -3,6 +3,8 @@ package com.apisentinel.service;
 import com.apisentinel.config.JwtProperties;
 import com.apisentinel.entity.User;
 import com.apisentinel.enums.Role;
+import com.apisentinel.security.AuthenticatedUser;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -17,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Base64;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,5 +97,55 @@ class JwtServiceTest {
         assertThatThrownBy(() -> new JwtProperties("too-short", 60))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageNotContaining("too-short");
+    }
+
+    @Test
+    @DisplayName("parse: sahi token se id aur role mile")
+    void parse_valid() {
+        AuthenticatedUser user = service.parse(service.issue(user()).value());
+
+        assertThat(user.id()).isEqualTo(5L);
+        assertThat(user.role()).isEqualTo(Role.USER);
+    }
+
+    @Test
+    @DisplayName("parse: expired token reject")
+    void parse_expired() {
+        String token = service.issue(user()).value();
+        JwtService later = new JwtService(new JwtProperties(SECRET, 60),
+                Clock.fixed(NOW.plusSeconds(3601), ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> later.parse(token)).isInstanceOf(ExpiredJwtException.class);
+    }
+
+    @Test
+    @DisplayName("parse: payload badla toh reject")
+    void parse_tampered() {
+        String[] parts = service.issue(user()).value().split("\\.");
+        String tampered = parts[0] + "." + "X" + parts[1].substring(1) + "." + parts[2];
+
+        assertThatThrownBy(() -> service.parse(tampered)).isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("parse: alg=none wala unsigned token (classic attack) reject")
+    void parse_algNone() {
+        Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
+        String header = enc.encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8));
+        String payload = enc.encodeToString(
+                "{\"iss\":\"api-sentinel\",\"sub\":\"5\",\"role\":\"ADMIN\"}".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> service.parse(header + "." + payload + "."))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("parse: issuer alag ho toh reject")
+    void parse_wrongIssuer() {
+        String foreign = Jwts.builder().issuer("someone-else").subject("5").claim("role", "USER")
+                .issuedAt(Date.from(NOW)).expiration(Date.from(NOW.plusSeconds(3600)))
+                .signWith(key(SECRET), Jwts.SIG.HS256).compact();
+
+        assertThatThrownBy(() -> service.parse(foreign)).isInstanceOf(JwtException.class);
     }
 }

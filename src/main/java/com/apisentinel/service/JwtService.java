@@ -2,6 +2,12 @@ package com.apisentinel.service;
 
 import com.apisentinel.config.JwtProperties;
 import com.apisentinel.entity.User;
+import com.apisentinel.enums.Role;
+import com.apisentinel.security.AuthenticatedUser;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
@@ -45,5 +51,23 @@ public class JwtService {
                 .compact();
 
         return new IssuedToken(token, props.expiryMinutes() * 60);
+    }
+
+    public AuthenticatedUser parse(String token) {
+        Jws<Claims> jws = Jwts.parser()
+                .verifyWith(key)
+                .requireIssuer(ISSUER)
+                .clock(() -> Date.from(Instant.now(clock)))
+                .build()
+                .parseSignedClaims(token);
+
+        if (!"HS256".equals(jws.getHeader().getAlgorithm())) {
+            throw new JwtException("unexpected signing algorithm");
+        }
+
+        Claims claims = jws.getPayload();
+        Long userId = Long.valueOf(claims.getSubject());
+        Role role = Role.valueOf(claims.get("role", String.class));
+        return new AuthenticatedUser(userId, role);
     }
 }

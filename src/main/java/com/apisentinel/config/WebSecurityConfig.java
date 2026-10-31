@@ -1,6 +1,7 @@
 package com.apisentinel.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.apisentinel.security.JwtAuthenticationFilter;
+import com.apisentinel.service.JwtService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -24,9 +26,8 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -36,7 +37,9 @@ public class WebSecurityConfig {
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/mock/**", "/actuator/health").permitAll()
-                        .anyRequest().authenticated());
+                        .anyRequest().authenticated())
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService),
+                        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

@@ -1,10 +1,14 @@
 package com.apisentinel.controller;
+
 import com.apisentinel.dto.request.CreateMonitorRequest;
 import com.apisentinel.dto.request.UpdateMonitorRequest;
 import com.apisentinel.dto.response.MonitorResponse;
+import com.apisentinel.security.AuthenticatedUser;
+import com.apisentinel.service.MonitorAccess;
 import com.apisentinel.service.MonitorService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -16,14 +20,16 @@ import java.util.List;
 public class MonitorController {
 
     private final MonitorService monitorService;
+    private final MonitorAccess monitorAccess;
 
-    public MonitorController(MonitorService monitorService) {
+    public MonitorController(MonitorService monitorService,MonitorAccess monitorAccess) {
         this.monitorService = monitorService;
+        this.monitorAccess = monitorAccess;
     }
 
     @PostMapping
-    public ResponseEntity<MonitorResponse> create(@Valid @RequestBody CreateMonitorRequest request) {
-        MonitorResponse created = monitorService.create(request);
+    public ResponseEntity<MonitorResponse> create(@Valid @RequestBody CreateMonitorRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
+        MonitorResponse created = monitorService.create(request,user.id());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -34,19 +40,21 @@ public class MonitorController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<MonitorResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(monitorService.getById(id));
-    }
+    // @GetMapping("/{id}")
+    // public ResponseEntity<MonitorResponse> getById(@PathVariable Long id) {
+    //     return ResponseEntity.ok(monitorService.getById(id));
+    // }
 
-    @GetMapping
-    public ResponseEntity<List<MonitorResponse>> getAll() {
-        return ResponseEntity.ok(monitorService.getAll());
+    @GetMapping("/{id}")
+    public ResponseEntity<MonitorResponse> getById(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        monitorAccess.assertAccessible(id, user);
+        return ResponseEntity.ok(monitorService.getById(id));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<MonitorResponse> update(@PathVariable Long id,
-                                                  @Valid @RequestBody UpdateMonitorRequest request) {
+            @Valid @RequestBody UpdateMonitorRequest request) {
         return ResponseEntity.ok(monitorService.update(id, request));
     }
 

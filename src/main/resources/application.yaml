@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sentinel}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:mr.cs193}
 
   jpa:
     hibernate:
@@ -48,3 +48,6 @@ sentinel:
     ssrf:
       allow-private-targets: ${SENTINEL_ALLOW_PRIVATE_TARGETS:true}
       max-redirects: 3
+  jwt:
+    secret: ${SENTINEL_JWT_SECRET:q8Xv2mL9pR4tY7kN3wF6aB1cD5eG0hJ2sK8nM4zP6uA=}
+    expiry-minutes: 60

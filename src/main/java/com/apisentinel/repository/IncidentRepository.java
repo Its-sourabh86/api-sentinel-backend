@@ -28,4 +28,19 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     @Transactional
     @Query("UPDATE Incident i SET i.lastNotifiedAt = :at WHERE i.id = :id")
     int markNotified(@Param("id") Long id, @Param("at") Instant at);
+
+    @Query("""
+            SELECT i FROM Incident i
+            WHERE i.monitorId IN (SELECT m.id FROM Monitor m WHERE m.ownerId = :ownerId)
+            """)
+    Page<Incident> findForOwner(@Param("ownerId") Long ownerId, Pageable pageable);
+
+    @Query("""
+            SELECT i FROM Incident i
+            WHERE i.status = :status
+              AND i.monitorId IN (SELECT m.id FROM Monitor m WHERE m.ownerId = :ownerId)
+            """)
+    Page<Incident> findForOwnerAndStatus(@Param("ownerId") Long ownerId,
+            @Param("status") IncidentStatus status,
+            Pageable pageable);
 }
